@@ -68,6 +68,6 @@ chat-colaborativo-ws/
 ├── server.js        # Lógica del servidor y WebSockets
 ├── package.json     # Configuración de Node.js
 └── .gitignore       # Archivos ignorados por Git
-
+---
 
 Desarrollado por: dorritonachito
