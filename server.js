@@ -1,11 +1,34 @@
 const WebSocket = require('ws');
+const http = require('http');
+const fs = require('fs');
 
-// Creamos el servidor WebSocket en el puerto 8080
-const wss = new WebSocket.Server({ port: 8080 });
+// Creamos un servidor HTTP básico para que Render sepa que estamos vivos
+const server = http.createServer((req, res) => {
+    // Si entran a la web, les damos el archivo index.html
+    if (req.method === 'GET' && req.url === '/') {
+        fs.readFile('index.html', (err, data) => {
+            if (err) {
+                res.writeHead(500);
+                return res.end('Error cargando index.html');
+            }
+            res.writeHead(200, { 'Content-Type': 'text/html' });
+            res.end(data);
+        });
+    } else {
+        res.writeHead(404);
+        res.end('Not Found');
+    }
+});
 
-console.log('Servidor WebSocket iniciado en ws://localhost:8080');
+// Iniciamos el servidor en el puerto que diga la nube (o 8080 en casa)
+const port = process.env.PORT || 8080;
+server.listen(port, () => {
+    console.log(`Servidor escuchando en el puerto ${port}`);
+});
 
-// Función para enviar mensajes a TODOS los clientes conectados
+// Conectamos el WebSocket a ese servidor HTTP
+const wss = new WebSocket.Server({ server });
+
 function broadcast(data) {
     wss.clients.forEach((client) => {
         if (client.readyState === WebSocket.OPEN) {
@@ -15,39 +38,21 @@ function broadcast(data) {
 }
 
 wss.on('connection', (ws) => {
-    // 1. Asignar nombre de usuario temporal
     const userId = Math.floor(Math.random() * 10000);
     const username = `Usuario_${userId}`;
     ws.username = username;
 
-    console.log(`Nuevo cliente conectado: ${username}`);
+    console.log(`Nuevo cliente: ${username}`);
 
-    // 2. Notificar entrada
-    broadcast({
-        type: 'sistema',
-        content: `🟢 ${username} se ha unido al chat.`
-    });
+    broadcast({ type: 'sistema', content: `🟢 ${username} entró al chat.` });
 
-    // 3. Recibir y reenviar mensajes
     ws.on('message', (message) => {
         try {
-            const textMsg = message.toString();
-            broadcast({
-                type: 'mensaje',
-                user: username,
-                content: textMsg
-            });
-        } catch (e) {
-            console.error('Error procesando mensaje', e);
-        }
+            broadcast({ type: 'mensaje', user: username, content: message.toString() });
+        } catch (e) { console.error(e); }
     });
 
-    // 4. Notificar salida
     ws.on('close', () => {
-        console.log(`Cliente desconectado: ${username}`);
-        broadcast({
-            type: 'sistema',
-            content: `🔴 ${username} ha abandonado el chat.`
-        });
+        broadcast({ type: 'sistema', content: `🔴 ${username} salió del chat.` });
     });
 });
