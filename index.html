@@ -27,7 +27,7 @@
     </div>
 
     <script>
-        const socket = new WebSocket('ws://localhost:8080');
+        const socket = new WebSocket(location.origin.replace(/^http/, 'ws'));
         const list = document.getElementById('messages');
         const input = document.getElementById('messageInput');
         const btn = document.getElementById('sendBtn');
